@@ -1,0 +1,2 @@
+filterRnC 2
+filterInnerGrid 2
