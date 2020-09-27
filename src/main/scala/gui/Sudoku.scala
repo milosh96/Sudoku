@@ -92,7 +92,7 @@ class Sudoku extends Application {
     })
     val solveSeq = new MenuItem("Save solve sequence")
     solveSeq.setOnAction(a => {
-      val (oldTable: Table, newTable: Table) = grid.solveSeq
+      val (oldTable: Table, newTable) = grid.solveSeq
       if (newTable != null) {
         val fileChooser = new FileChooser()
         fileChooser.setInitialDirectory(new File("src/main/resources/sequences"))
