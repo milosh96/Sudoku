@@ -28,7 +28,7 @@ class FileTest {
     Assert.assertEquals('P', table(1)(8))
   }
 
-  @Test def getSequenceFromFileTest() = {
+  @Test def getSequenceFromFileTest(): Unit = {
     val file: File = new File("src/main/resources/sequences/seq1.txt")
     val seq: Array[Char] = FileUtil.getSeqFromFile(file)
 
@@ -40,7 +40,7 @@ class FileTest {
     Assert.assertEquals('5', seq(4))
   }
 
-  @Test def getInvalidSequenceFromFileTest() = {
+  @Test def getInvalidSequenceFromFileTest() : Unit = {
     val file: File = new File("src/main/resources/sequences/se1_invalid.txt")
 
     //sequence
