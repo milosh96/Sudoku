@@ -1,6 +1,6 @@
 package engine
 
-import model.Table
+import model.{Coordinates, Table}
 import org.junit._
 
 class GameTest {
@@ -165,6 +165,46 @@ class GameTest {
     Assert.assertEquals(false, Game.checkEnd(unsolved))
     val solved: Table = Game.solveSudoku(unsolved)
     Assert.assertEquals(true, Game.checkEnd(solved))
+  }
+
+  @Test def createSeqTest(): Unit = {
+    val nums_unsolved: Array[Array[Int]] = Array(Array(4, 8, 1, 2, 9, 6, 3, 7, 5), Array(2, 5, 6, 3, 1, 7, 8, 4, 9),
+      Array(3, 7, 9, 5, 0, 4, 2, 1, 6), Array(9, 4, 8, 1, 5, 3, 7, 6, 2), Array(1, 6, 5, 0, 0, 2, 4, 0, 0), Array(7, 3, 2, 6, 4, 8, 9, 5, 0),
+      Array(6, 1, 4, 7, 2, 9, 5, 3, 8), Array(5, 2, 7, 8, 3, 1, 6, 9, 4), Array(8, 9, 3, 4, 6, 5, 1, 2, 7))
+    val nums_solved: Array[Array[Int]] = Array(Array(4, 8, 1, 2, 9, 6, 3, 7, 5), Array(2, 5, 6, 3, 1, 7, 8, 4, 9),
+      Array(3, 7, 9, 5, 8, 4, 2, 1, 6), Array(9, 4, 8, 1, 5, 3, 7, 6, 2), Array(1, 6, 5, 9, 7, 2, 4, 8, 3), Array(7, 3, 2, 6, 4, 8, 9, 5, 1),
+      Array(6, 1, 4, 7, 2, 9, 5, 3, 8), Array(5, 2, 7, 8, 3, 1, 6, 9, 4), Array(8, 9, 3, 4, 6, 5, 1, 2, 7))
+    //unsolved
+    //    481296375
+    //    256317849
+    //    3795P4216
+    //    948153762
+    //    165--24--
+    //    73264895-
+    //    614729538
+    //    527831694
+    //    893465127
+    //solved
+    //    481296375
+    //    256317849
+    //    379584216
+    //    948153762
+    //    165972483
+    //    732648951
+    //    614729538
+    //    527831694
+    //    893465127
+    val unsolved: Table = new Table(nums_unsolved)
+    val solved: Table = new Table(nums_solved)
+    val sequence: Array[Char] = Game.createSequence(unsolved, solved, new Coordinates(2, 4))
+    //sequence
+    // 8 d d 7 l 9 r r r r 8 r 3 d 1
+    Assert.assertEquals(sequence(1), 'd')
+    Assert.assertEquals(sequence(3), '7')
+    Assert.assertEquals(sequence(5), '9')
+    Assert.assertEquals(sequence(8), 'r')
+    Assert.assertEquals(sequence(9), 'r')
+    Assert.assertEquals(sequence(12), '3')
   }
 
 }

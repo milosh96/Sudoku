@@ -82,6 +82,19 @@ object Game {
     }
   }
 
+  def solveSudoku(table: Table): Table = {
+    val possibilities: Array[Array[mutable.Set[Int]]] = findPossibilities(table)
+    solve(table, possibilities)
+  }
+
+  def findPossibilities(table: Table): Array[Array[mutable.Set[Int]]] = {
+    val possibilities: Array[Array[mutable.Set[Int]]] = Array.ofDim[mutable.Set[Int]](boardSize, boardSize)
+    for (x <- 0 until boardSize; y <- 0 until boardSize if table.nums(x)(y) == 0) {
+      possibilities(x)(y) = calculatePossibilities(table, x, y)
+    }
+    possibilities
+  }
+
   def calculatePossibilities(table: Table, x: Int, y: Int): mutable.Set[Int] = {
     def filterRow(allNums: mutable.Set[Int]) = {
       for (i <- 0 until boardSize if table.nums(x)(i) != 0)
@@ -117,21 +130,23 @@ object Game {
 
   }
 
-  def findPossibilities(table: Table): Array[Array[mutable.Set[Int]]] = {
-    val possibilities: Array[Array[mutable.Set[Int]]] = Array.ofDim[mutable.Set[Int]](boardSize, boardSize)
-    for (x <- 0 until boardSize; y <- 0 until boardSize if table.nums(x)(y) == 0) {
-      possibilities(x)(y) = calculatePossibilities(table, x, y)
+  def solve(table: Table, possibilities: Array[Array[mutable.Set[Int]]]): Table = {
+    val (x, y) = getMinPossibilities(possibilities)
+    if (x == -1) {
+      if (hasEmptyFields(table)) null
+      else table
+    } else {
+      for (tryNumber <- 0 until possibilities(x)(y).size) {
+        val num: Int = possibilities(x)(y).toList(tryNumber)
+        table.nums(x)(y) = num
+        //        val updatedPossiblities: Array[Array[mutable.Set[Int]]] = updatePossibilities(possibilities, x, y, num)
+        val updatedPossiblities: Array[Array[mutable.Set[Int]]] = findPossibilities(table)
+        val newTable: Table = solve(table, updatedPossiblities)
+        if (newTable != null) return newTable
+        else table.nums(x)(y) = 0
+      }
+      null
     }
-    possibilities
-  }
-
-  def updatePossibilities(poss: Array[Array[mutable.Set[Int]]], x: Int, y: Int, num: Int): Array[Array[mutable.Set[Int]]] = {
-    val newPossibilities: Array[Array[mutable.Set[Int]]] = Array.ofDim[mutable.Set[Int]](boardSize, boardSize)
-    for (i <- 0 until boardSize; j <- 0 until boardSize) {
-      newPossibilities(i)(j) = poss(i)(j)
-    }
-
-    newPossibilities
   }
 
   def getMinPossibilities(poss: Array[Array[mutable.Set[Int]]]): (Int, Int) = {
@@ -148,34 +163,17 @@ object Game {
     (xBest, yBest)
   }
 
+  def updatePossibilities(poss: Array[Array[mutable.Set[Int]]], x: Int, y: Int, num: Int): Array[Array[mutable.Set[Int]]] = {
+    val newPossibilities: Array[Array[mutable.Set[Int]]] = Array.ofDim[mutable.Set[Int]](boardSize, boardSize)
+    for (i <- 0 until boardSize; j <- 0 until boardSize) {
+      newPossibilities(i)(j) = poss(i)(j)
+    }
+
+    newPossibilities
+  }
+
   def hasEmptyFields(table: Table): Boolean = {
     table.nums.exists(row => row.exists(num => num == 0))
-  }
-
-  def solveSudoku(table: Table): Table = {
-    val possibilities: Array[Array[mutable.Set[Int]]] = findPossibilities(table)
-    solve(table, possibilities)
-  }
-
-  def solve(table: Table, possibilities: Array[Array[mutable.Set[Int]]]): Table = {
-    val (x, y) = getMinPossibilities(possibilities)
-    if (x == -1) {
-      if (hasEmptyFields(table))
-        null
-      else table
-    } else {
-      for (tryNumber <- 0 until possibilities(x)(y).size) {
-        val num: Int = possibilities(x)(y).toList(tryNumber)
-        table.nums(x)(y) = num
-        //        val updatedPossiblities: Array[Array[mutable.Set[Int]]] = updatePossibilities(possibilities, x, y, num)
-        val updatedPossiblities: Array[Array[mutable.Set[Int]]] = findPossibilities(table)
-        val newTable: Table = solve(table, updatedPossiblities)
-        if (newTable != null)
-          return newTable
-        else table.nums(x)(y) = 0
-      }
-      null
-    }
   }
 
   def transpose(table: Table): Table = {
@@ -214,11 +212,6 @@ object Game {
       return table
 
     val index: Int = getIndex(x, y)
-
-    //    val xFrom: Int = (index % gridSize) * gridSize
-    //    val xTo: Int = xFrom + gridSize
-    //    val yFrom: Int = (index / gridSize) * gridSize
-    //    val yTo: Int = yFrom + gridSize
     val xFrom: Int = (index / gridSize) * gridSize
     val xTo: Int = xFrom + gridSize
     val yFrom: Int = (index % gridSize) * gridSize
@@ -251,13 +244,13 @@ object Game {
   }
 
   @tailrec
-  final def recSequence(currPosition : Coordinates, result: mutable.ArrayBuffer[Char], nums: mutable.ArrayBuffer[Int], coordinates: mutable.ArrayBuffer[Coordinates]): Array[Char] = {
-    val nextPosition : Coordinates = getMinDiff(currPosition, coordinates)
+  final def recSequence(currPosition: Coordinates, result: mutable.ArrayBuffer[Char], nums: mutable.ArrayBuffer[Int], coordinates: mutable.ArrayBuffer[Coordinates]): Array[Char] = {
+    val nextPosition: Coordinates = getMinDiff(currPosition, coordinates)
     if (nextPosition == null) result.toArray
     else {
       getToPosition(currPosition, nextPosition, result)
       val index: Int = coordinates.indexOf(nextPosition)
-      val charValue : Char = nums(index) match {
+      val charValue: Char = nums(index) match {
         case 1 => '1'
         case 2 => '2'
         case 3 => '3'
@@ -275,7 +268,7 @@ object Game {
     }
   }
 
-  def getMinDiff(currPosition: Coordinates, coordinates: mutable.ArrayBuffer[Coordinates]) : Coordinates = {
+  def getMinDiff(currPosition: Coordinates, coordinates: mutable.ArrayBuffer[Coordinates]): Coordinates = {
     if (coordinates.size == 0) null
     else coordinates.minBy(_.getDistance(currPosition))
   }
@@ -283,11 +276,11 @@ object Game {
   def getToPosition(from: Coordinates, to: Coordinates, result: mutable.ArrayBuffer[Char]): Unit = {
     for (verticalDiff <- 0 until (from.x - to.x))
       result.addOne('u')
-    for(verticalDiff <- 0 until (to.x - from.x))
+    for (verticalDiff <- 0 until (to.x - from.x))
       result.addOne('d')
     for (horizontalDIff <- 0 until (from.y - to.y))
       result.addOne('l')
-    for(horizontalDIff <- 0 until (to.y - from.y))
+    for (horizontalDIff <- 0 until (to.y - from.y))
       result.addOne('r')
   }
 
