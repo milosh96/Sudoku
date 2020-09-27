@@ -1,8 +1,9 @@
 package engine
 
-import model.{Table}
+import model.{Coordinates, Table}
 import util.Constants
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 object Game {
@@ -36,12 +37,11 @@ object Game {
       true
     }
 
-    // not necessary at all...
     def checkInner(): Boolean = {
       def check(index: Int): Boolean = {
-        val xFrom: Int = (index % gridSize) * gridSize
+        val xFrom: Int = (index / gridSize) * gridSize
         val xTo: Int = xFrom + gridSize
-        val yFrom: Int = (index / gridSize) * gridSize
+        val yFrom: Int = (index % gridSize) * gridSize
         val yTo: Int = yFrom + gridSize
 
         for (x <- xFrom until xTo) {
@@ -215,10 +215,10 @@ object Game {
 
     val index: Int = getIndex(x, y)
 
-//    val xFrom: Int = (index % gridSize) * gridSize
-//    val xTo: Int = xFrom + gridSize
-//    val yFrom: Int = (index / gridSize) * gridSize
-//    val yTo: Int = yFrom + gridSize
+    //    val xFrom: Int = (index % gridSize) * gridSize
+    //    val xTo: Int = xFrom + gridSize
+    //    val yFrom: Int = (index / gridSize) * gridSize
+    //    val yTo: Int = yFrom + gridSize
     val xFrom: Int = (index / gridSize) * gridSize
     val xTo: Int = xFrom + gridSize
     val yFrom: Int = (index % gridSize) * gridSize
@@ -231,6 +231,64 @@ object Game {
     }
 
     new Table(table.nums)
+  }
+
+  def createSequence(oldTable: Table, newTable: Table, startPosition: Coordinates): Array[Char] = {
+    val result: mutable.ArrayBuffer[Char] = mutable.ArrayBuffer[Char]()
+    val (nums, coordinates): (mutable.ArrayBuffer[Int], mutable.ArrayBuffer[Coordinates]) = tableDiff(oldTable, newTable)
+
+    recSequence(startPosition, result, nums, coordinates)
+  }
+
+  def tableDiff(oldTable: Table, newTable: Table): (mutable.ArrayBuffer[Int], mutable.ArrayBuffer[Coordinates]) = {
+    val nums: mutable.ArrayBuffer[Int] = mutable.ArrayBuffer[Int]()
+    val coordinates: mutable.ArrayBuffer[Coordinates] = mutable.ArrayBuffer[Coordinates]()
+    for (x <- 0 until boardSize; y <- 0 until boardSize if oldTable.nums(x)(y) != newTable.nums(x)(y)) {
+      nums.addOne(newTable.nums(x)(y))
+      coordinates.addOne(new Coordinates(x, y))
+    }
+    (nums, coordinates)
+  }
+
+  @tailrec
+  final def recSequence(currPosition : Coordinates, result: mutable.ArrayBuffer[Char], nums: mutable.ArrayBuffer[Int], coordinates: mutable.ArrayBuffer[Coordinates]): Array[Char] = {
+    val nextPosition : Coordinates = getMinDiff(currPosition, coordinates)
+    if (nextPosition == null) result.toArray
+    else {
+      getToPosition(currPosition, nextPosition, result)
+      val index: Int = coordinates.indexOf(nextPosition)
+      val charValue : Char = nums(index) match {
+        case 1 => '1'
+        case 2 => '2'
+        case 3 => '3'
+        case 4 => '4'
+        case 5 => '5'
+        case 6 => '6'
+        case 7 => '7'
+        case 8 => '8'
+        case 9 => '9'
+      }
+      result.addOne(charValue)
+      nums.remove(index)
+      coordinates.remove(index)
+      recSequence(nextPosition, result, nums, coordinates)
+    }
+  }
+
+  def getMinDiff(currPosition: Coordinates, coordinates: mutable.ArrayBuffer[Coordinates]) : Coordinates = {
+    if (coordinates.size == 0) null
+    else coordinates.minBy(_.getDistance(currPosition))
+  }
+
+  def getToPosition(from: Coordinates, to: Coordinates, result: mutable.ArrayBuffer[Char]): Unit = {
+    for (verticalDiff <- 0 until (from.x - to.x))
+      result.addOne('u')
+    for(verticalDiff <- 0 until (to.x - from.x))
+      result.addOne('d')
+    for (horizontalDIff <- 0 until (from.y - to.y))
+      result.addOne('l')
+    for(horizontalDIff <- 0 until (to.y - from.y))
+      result.addOne('r')
   }
 
 }

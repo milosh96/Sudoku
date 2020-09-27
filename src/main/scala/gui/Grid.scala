@@ -4,14 +4,11 @@ package gui
 import engine.Game
 import javafx.geometry.{Insets, Pos}
 import javafx.scene.control.Alert.AlertType
-import javafx.scene.control.{Alert, Label, TextField}
-import javafx.scene.input.{KeyCode, MouseEvent}
-import javafx.scene.layout.{Border, GridPane}
+import javafx.scene.control.{Alert, TextField}
+import javafx.scene.input.{KeyCode}
+import javafx.scene.layout.{GridPane}
 import model.{Cell, Coordinates, Table}
 import util.{Constants, TableUtil}
-
-import scala.annotation.tailrec
-import scala.collection.mutable
 
 class Grid extends GridPane {
   setPadding(new Insets(5, 5, 5, 5))
@@ -26,7 +23,6 @@ class Grid extends GridPane {
       cell.getStyleClass.add("cell")
       cell.setAlignment(Pos.CENTER)
       setEventListeners(cell)
-
       cells(x)(y) = new Cell(cell, x, y, false)
     }
   }
@@ -69,7 +65,6 @@ class Grid extends GridPane {
       else if (keyCode == KeyCode.DELETE) deleteValue()
       else event.consume()
     })
-
     cell.addEventHandler(javafx.scene.input.KeyEvent.KEY_TYPED, (e: javafx.scene.input.KeyEvent) => {
       e.consume()
     })
@@ -188,11 +183,14 @@ class Grid extends GridPane {
 
   }
 
+  def deleteValue(): Unit = {
+    if (!gameMode || !pointer.originalField) pointer.field.setText("")
+  }
+
   def loadTable(table: Array[Array[Char]]): Unit = {
     if (table.length != boardSize)
       throw new Exception("Error loading table")
 
-    gameMode = true
     for (x <- 0 until boardSize) {
       for (y <- 0 until boardSize) {
         val char: Char = table(x)(y)
@@ -211,23 +209,13 @@ class Grid extends GridPane {
           }
           case '-' => {
             cell.field.setText("")
+            cell.originalField = false
           }
           case _ => {
             throw new Exception("Invalid file")
           }
         }
 
-
-      }
-    }
-  }
-
-  def clearTable(): Unit = {
-    for (x <- 0 until boardSize) {
-      for (y <- 0 until boardSize) {
-        val cell: Cell = cells(x)(y)
-        cell.field.setText("")
-        cell.originalField = false
       }
     }
   }
@@ -245,16 +233,17 @@ class Grid extends GridPane {
     }
   }
 
-  def playCommands(commands : Array[String]) = {
+  def playCommands(commands: Array[String]) = {
     def matchFilter(str: String): Unit = {
       val strings: Array[String] = str.split(" ")
-      if(strings.length == 2)
+      if (strings.length == 2)
         strings(0) match {
           case "filterRnC" => filterRnC(strings(1).toInt)
           case "filterInnerGrid" => filterInnerGrid(strings(1).toInt)
         }
     }
-    for( x <- 0 until commands.length){
+
+    for (x <- 0 until commands.length) {
       commands(x) match {
         case "transpose" => transpose
         case "substitute" => substitute
@@ -266,18 +255,12 @@ class Grid extends GridPane {
   def checkEnd(): Unit = {
     val table: Table = TableUtil.createTable(cells)
     val end = Game.checkEnd(table)
+    val alert = new Alert(AlertType.INFORMATION)
+    alert.setTitle("Game end")
+    if (end) alert.setContentText("Sudoku game is solved")
+    else alert.setContentText("Sudoku game isn't solved")
 
-    if (end) {
-      val alert = new Alert(AlertType.INFORMATION)
-      alert.setTitle("Game end")
-      alert.setContentText("Sudoku game has been successfully solved")
-      alert.show()
-    } else {
-      val alert = new Alert(AlertType.INFORMATION)
-      alert.setTitle("Game end")
-      alert.setContentText("Sudoku game isn't solved")
-      alert.show()
-    }
+    alert.show()
   }
 
   def solve(): Unit = {
@@ -286,72 +269,17 @@ class Grid extends GridPane {
 
   def solveSeq(): (Table, Table) = {
     val table: Table = TableUtil.createTable(cells)
-    val hardCopy : Table = TableUtil.copyTable(table)
+    val hardCopy: Table = TableUtil.copyTable(table)
     val resultingTable: Table = Game.solveSudoku(table)
     (hardCopy, resultingTable)
   }
 
-  def tableDiff(oldTable: Table, newTable: Table): (mutable.ArrayBuffer[Int], mutable.ArrayBuffer[Coordinates]) = {
-    val nums: mutable.ArrayBuffer[Int] = mutable.ArrayBuffer[Int]()
-    val coordinates: mutable.ArrayBuffer[Coordinates] = mutable.ArrayBuffer[Coordinates]()
-    for (x <- 0 until boardSize; y <- 0 until boardSize if oldTable.nums(x)(y) != newTable.nums(x)(y)) {
-      nums.addOne(newTable.nums(x)(y))
-      coordinates.addOne(new Coordinates(x, y))
-    }
-    (nums, coordinates)
-  }
-
   def createSeq(oldTable: Table, newTable: Table): Array[Char] = {
-    val startPosition : Coordinates = new Coordinates(pointer.y, pointer.x)
-    val result: mutable.ArrayBuffer[Char] = mutable.ArrayBuffer[Char]()
-    val (nums, coordinates): (mutable.ArrayBuffer[Int], mutable.ArrayBuffer[Coordinates]) = tableDiff(oldTable, newTable)
-
-    recSequence(startPosition, result, nums, coordinates)
+    val startPosition: Coordinates = new Coordinates(pointer.y, pointer.x)
+    Game.createSequence(oldTable, newTable, startPosition)
   }
 
-
-  @tailrec
-  final def recSequence(currPosition : Coordinates, result: mutable.ArrayBuffer[Char], nums: mutable.ArrayBuffer[Int], coordinates: mutable.ArrayBuffer[Coordinates]): Array[Char] = {
-    val nextPosition : Coordinates = getMinDiff(currPosition, coordinates)
-    if (nextPosition == null) result.toArray
-    else {
-      getToPosition(currPosition, nextPosition, result)
-      val index: Int = coordinates.indexOf(nextPosition)
-      val charValue : Char = nums(index) match {
-        case 1 => '1'
-        case 2 => '2'
-        case 3 => '3'
-        case 4 => '4'
-        case 5 => '5'
-        case 6 => '6'
-        case 7 => '7'
-        case 8 => '8'
-        case 9 => '9'
-      }
-      result.addOne(charValue)
-      nums.remove(index)
-      coordinates.remove(index)
-      recSequence(nextPosition, result, nums, coordinates)
-    }
-  }
-
-  def getMinDiff(currPosition: Coordinates, coordinates: mutable.ArrayBuffer[Coordinates]) : Coordinates = {
-    if (coordinates.size == 0) null
-    else coordinates.minBy(_.getDistance(currPosition))
-  }
-
-  def getToPosition(from: Coordinates, to: Coordinates, result: mutable.ArrayBuffer[Char]): Unit = {
-      for (verticalDiff <- 0 until (from.x - to.x))
-        result.addOne('u')
-      for(verticalDiff <- 0 until (to.x - from.x))
-        result.addOne('d')
-      for (horizontalDIff <- 0 until (from.y - to.y))
-        result.addOne('l')
-      for(horizontalDIff <- 0 until (to.y - from.y))
-        result.addOne('r')
-  }
-
-  def solveable(): Boolean = {
+  def solvable(): Boolean = {
     val table: Table = TableUtil.createTable(cells)
     val resultingTable: Table = Game.solveSudoku(table)
     if (resultingTable == null) false
@@ -412,10 +340,6 @@ class Grid extends GridPane {
     } else {
       TableUtil.updateCells(cells, resultingTable)
     }
-  }
-
-  def deleteValue(): Unit = {
-    if (!gameMode || !pointer.originalField) pointer.field.setText("")
   }
 
   def setAllFieldsAsOriginals(): Unit = {

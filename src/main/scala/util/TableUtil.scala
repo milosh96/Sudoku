@@ -42,7 +42,7 @@ object TableUtil {
   }
 
   def updateCells(cells: Array[Array[Cell]], table: Table) {
-    val transitions : Array[Array[FadeTransition]] = Array.ofDim[FadeTransition](cells.length, cells.length)
+//    val transitions : Array[Array[FadeTransition]] = Array.ofDim[FadeTransition](cells.length, cells.length)
     for (x <- 0 until cells.length; y <- 0 until cells.length) {
         val num = table.nums(x)(y)
         val text: String = num match {

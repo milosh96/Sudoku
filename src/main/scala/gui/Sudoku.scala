@@ -5,12 +5,11 @@ import java.io.File
 import javafx.application.Application
 import javafx.geometry.Pos
 import javafx.scene.Scene
-import javafx.scene.control.{Alert, ButtonType, ChoiceDialog, Dialog, Menu, MenuBar, MenuItem, TextInputDialog, ToggleButton, ToggleGroup}
-import javafx.scene.layout.{BorderPane, HBox, VBox}
+import javafx.scene.control.{Alert, ChoiceDialog, Dialog, Menu, MenuBar, MenuItem, ToggleButton, ToggleGroup}
+import javafx.scene.layout.{BorderPane, HBox}
 import javafx.scene.paint.Color
 import javafx.stage.{FileChooser, Stage}
 import util.{DialogUtil, FileUtil, TableUtil}
-import java.util
 
 import javafx.scene.control.Alert.AlertType
 import javafx.util.Pair
@@ -33,25 +32,10 @@ class Sudoku extends Application {
     stage.show()
   }
 
-  def modeDialog(): Unit = {
-    val alert = new Alert(AlertType.WARNING)
-    alert.setTitle("Game mode")
-    alert.setContentText("You are not in a proper game mode for this operation")
-    alert.show()
-  }
-
-  def boardSolveable() = {
-    val alert = new Alert(AlertType.INFORMATION)
-    alert.setTitle("Board")
-    alert.setContentText("Board is solvable")
-    alert.show()
-  }
-
-  def invalid(str: String): Unit = {
-    val alert = new Alert(AlertType.WARNING)
-    alert.setTitle(str)
-    alert.setContentText(str + " is not valid")
-    alert.show()
+  def createSudokuGrid(pane: BorderPane, stage: Stage): Grid = {
+    val grid = new Grid
+    pane.setCenter(grid)
+    grid
   }
 
   def createMenuBar(root: BorderPane, stage: Stage, grid: Grid): Unit = {
@@ -72,13 +56,7 @@ class Sudoku extends Application {
           grid.loadTable(loadedTable)
         }
         catch {
-          case e: Exception => {
-            val alert = new Alert(AlertType.ERROR)
-            alert.setTitle("Error")
-            alert.setContentText("Table provided is invalid")
-            alert.show()
-            grid.clearTable()
-          }
+          case e: Exception => invalid("Table")
         }
       }
 
@@ -95,19 +73,14 @@ class Sudoku extends Application {
           grid.playSequence(loadedSeq)
         }
         catch {
-          case e: Exception => {
-            val alert = new Alert(AlertType.ERROR)
-            alert.setTitle("Error")
-            alert.setContentText("Sequence provided is invalid")
-            alert.show()
-          }
+          case e: Exception => invalid("Sequence")
         }
       }
     })
     val saveBoard = new MenuItem("Save board")
     saveBoard.setOnAction(action => {
       if (!grid.gameMode) {
-        if (grid.solveable) {
+        if (grid.solvable) {
           val fileChooser = new FileChooser()
           fileChooser.setInitialDirectory(new File("src/main/resources/games"))
           fileChooser.setTitle("Save a game")
@@ -116,7 +89,6 @@ class Sudoku extends Application {
         } else invalid("Board")
       }
       else modeDialog
-
     })
     val solveSeq = new MenuItem("Save solve sequence")
     solveSeq.setOnAction(a => {
@@ -124,10 +96,12 @@ class Sudoku extends Application {
       if (newTable != null) {
         val fileChooser = new FileChooser()
         fileChooser.setInitialDirectory(new File("src/main/resources/sequences"))
-        fileChooser.setTitle("Save a sequnce")
+        fileChooser.setTitle("Save a sequence")
         val file: File = fileChooser.showSaveDialog(null)
-        val seq: Array[Char] = grid.createSeq(oldTable, newTable)
-        FileUtil.saveSeqToFile(file, seq)
+        if (file != null) {
+          val seq: Array[Char] = grid.createSeq(oldTable, newTable)
+          FileUtil.saveSeqToFile(file, seq)
+        }
       } else invalid("Board")
     })
     menuFile.getItems.addAll(loadBoard, loadSeq, saveBoard, solveSeq)
@@ -157,7 +131,6 @@ class Sudoku extends Application {
     val filterRnC = new MenuItem("Filter row & column")
     filterRnC.setOnAction(a => {
       if (!grid.gameMode) {
-        //TODO hardcoded
         val dialog: ChoiceDialog[Int] = new ChoiceDialog[Int](1, 1, 2, 3, 4, 5, 6, 7, 8, 9)
         dialog.setTitle("Filter rows and columns")
         dialog.setContentText("Choose value: ")
@@ -169,7 +142,6 @@ class Sudoku extends Application {
     val filterInnerGrid = new MenuItem("Filter inner grid")
     filterInnerGrid.setOnAction(a => {
       if (!grid.gameMode) {
-        //TODO hardcoded
         val dialog: ChoiceDialog[Int] = new ChoiceDialog[Int](1, 1, 2, 3, 4, 5, 6, 7, 8, 9)
         dialog.setTitle("Filter inner grid")
         dialog.setContentText("Choose value: ")
@@ -178,18 +150,18 @@ class Sudoku extends Application {
           grid.filterInnerGrid(result.get())
       } else modeDialog
     })
-    val solveable = new MenuItem("Solvable")
-    solveable.setOnAction(a => {
-      if (grid.solveable) boardSolveable
+    val solvable = new MenuItem("Solvable")
+    solvable.setOnAction(a => {
+      if (grid.solvable) boardSolvable
       else invalid("Board")
     })
-    menuBoard.getItems.addAll(transpose, substitute, filterRnC, filterInnerGrid, solveable)
+    menuBoard.getItems.addAll(transpose, substitute, filterRnC, filterInnerGrid, solvable)
     val menuCustom: Menu = new Menu("Custom")
     val customSeq: Menu = new Menu("Sequence")
     val customCommand: Menu = new Menu("Command")
     val seqAdd: MenuItem = new MenuItem("Add")
     seqAdd.setOnAction(a => {
-      val dialog: Dialog[Pair[String, String]] = DialogUtil.createFormDialog("Add sequence", "Seperate values [ 'd', 'u', 'l', 'r', {num} ] with '-'", "Name", "Sequence")
+      val dialog: Dialog[Pair[String, String]] = DialogUtil.createFormDialog("Add sequence", "Separate values [ 'd', 'u', 'l', 'r', {num} ] with '-'", "Name", "Sequence")
       val result = dialog.showAndWait()
       if (result.isPresent)
         if (!FileUtil.saveSeqToFile(result.get())) invalid("Sequence")
@@ -207,13 +179,17 @@ class Sudoku extends Application {
       if (result.isPresent) {
         val commandName: String = result.get().toString
         val file: File = new File("src/main/resources/named/seq/" + commandName + ".txt")
-        grid.playSequence(FileUtil.getSeqFromFile(file))
+        try {
+          grid.playSequence(FileUtil.getSeqFromFile(file))
+        } catch {
+          case e: Exception => invalid("Sequence")
+        }
       }
     })
     customSeq.getItems.addAll(seqAdd, seqPlay)
     val commAdd: MenuItem = new MenuItem("Add")
     commAdd.setOnAction(a => {
-      val dialog: Dialog[Pair[String, String]] = DialogUtil.createFormDialog("Add command", "Seperate values [ 'transpose', 'substitute', 'filterRnC {num}', 'filterInnerGrid {num}', {customCommand} ] with '-'", "Name", "Command")
+      val dialog: Dialog[Pair[String, String]] = DialogUtil.createFormDialog("Add command", "Separate values [ 'transpose', 'substitute', 'filterRnC {num}', 'filterInnerGrid {num}', {customCommand} ] with '-'", "Name", "Command")
       val result = dialog.showAndWait()
       if (result.isPresent)
         if (!FileUtil.saveCommandToFile(result.get())) invalid("Command")
@@ -231,18 +207,16 @@ class Sudoku extends Application {
       if (result.isPresent) {
         val commandName: String = result.get().toString
         val file: File = new File("src/main/resources/named/command/" + commandName + ".txt")
-        grid.playCommands(FileUtil.getCommandsFromFile(file))
+        try {
+          grid.playCommands(FileUtil.getCommandsFromFile(file))
+        } catch {
+          case e : Exception => invalid("Command")
+        }
       }
     })
     customCommand.getItems.addAll(commAdd, commPlay)
     menuCustom.getItems.addAll(customSeq, customCommand)
     menuBar.getMenus.addAll(menuFile, menuGame, menuBoard, menuCustom)
-  }
-
-  def createSudokuGrid(pane: BorderPane, stage: Stage): Grid = {
-    val grid = new Grid
-    pane.setCenter(grid)
-    grid
   }
 
   def createGameMode(pane: BorderPane, stage: Stage, grid: Grid): Unit = {
@@ -264,4 +238,26 @@ class Sudoku extends Application {
     hBox.setAlignment(Pos.BASELINE_CENTER)
     pane.setBottom(hBox)
   }
+
+  def modeDialog(): Unit = {
+    val alert = new Alert(AlertType.WARNING)
+    alert.setTitle("Game mode")
+    alert.setContentText("You are not in a proper game mode for this operation")
+    alert.show()
+  }
+
+  def boardSolvable() = {
+    val alert = new Alert(AlertType.INFORMATION)
+    alert.setTitle("Board")
+    alert.setContentText("Board is solvable")
+    alert.show()
+  }
+
+  def invalid(str: String): Unit = {
+    val alert = new Alert(AlertType.WARNING)
+    alert.setTitle(str)
+    alert.setContentText(str + " is not valid")
+    alert.show()
+  }
+
 }

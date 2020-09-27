@@ -31,6 +31,7 @@ object FileUtil {
   }
 
   def saveSeqToFile(file: File, seq: Array[Char]): Unit = {
+    //no check for valid values, only used when saving solve sequence which we generate
     val writer: PrintWriter = new PrintWriter(file)
     for (i <- 0 until seq.length) {
       writer.write(seq(i))
@@ -57,6 +58,16 @@ object FileUtil {
     }
   }
 
+  def getSeqFromFile(file: File): Array[Char] = {
+    val seq = Source.fromFile(file).getLines.toArray
+    val validValues: Set[Char] = Set[Char]('d', 'u', 'l', 'r', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+    if (seq.exists(line => line.length > 1))
+      throw new Exception("Invalid sequence file")
+    if (seq.exists(line => !validValues.contains(line.charAt(0))))
+      throw new Exception("Invalid sequence file")
+    seq.map(line => line.charAt(0))
+  }
+
   def saveCommandToFile(pair: Pair[String, String]): Boolean = {
     val fileName: String = pair.getKey
     val commands: Array[String] = pair.getValue.split("-")
@@ -74,14 +85,20 @@ object FileUtil {
     }
   }
 
-  def getSeqFromFile(file: File): Array[Char] = {
-    val seq = Source.fromFile(file).getLines.toArray
-    val validValues: Set[Char] = Set[Char]('d', 'u', 'l', 'r', '1', '2', '3', '4', '5', '6', '7', '8', '9')
-    if (seq.exists(line => line.length > 1))
-      throw new Exception("Invalid sequence file")
-    if (seq.exists(line => !validValues.contains(line.charAt(0))))
-      throw new Exception("Invalid sequence file")
-    seq.map(line => line.charAt(0))
+  def checkValidCommands(commands: Array[String], customCommands: Set[String], originalCommands: Set[String]): Boolean = {
+    if (commands.exists(command => !originalCommands.contains(command) && !customCommands.contains(command) && !filterCommand(command))) false
+    else true
+  }
+
+  def filterCommand(str: String): Boolean = {
+    val strings: Array[String] = str.split(" ")
+    val filterCommands: Set[String] = Set("filterRnC", "filterInnerGrid")
+    val validNums: Set[String] = Set("1", "2", "3", "4", "5", "6", "7", "8", "9")
+    if (strings.length != 2) false
+    else {
+      if (filterCommands.contains(strings(0)) && validNums.contains(strings(1))) true
+      else false
+    }
   }
 
   //return only simple commands
@@ -110,22 +127,6 @@ object FileUtil {
       finalCommands.toArray
     }
   }
-
-  def checkValidCommands(commands: Array[String], customCommands: Set[String], originalCommands: Set[String]): Boolean = {
-    if (commands.exists(command => !originalCommands.contains(command) && !customCommands.contains(command) && !filterCommand(command))) false
-    else true
-  }
-
-  def filterCommand(str: String): Boolean = {
-    val strings: Array[String] = str.split(" ")
-    val filterCommands: Set[String] = Set("filterRnC", "filterInnerGrid")
-    if (strings.length != 2) false
-    else {
-      if (filterCommands.contains(strings(0))) true
-      else false
-    }
-  }
-
 
   def getCustomSequences(): Seq[String] = {
     val file: Array[File] = new File("src/main/resources/named/seq").listFiles()

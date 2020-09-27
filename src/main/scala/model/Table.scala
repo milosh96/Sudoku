@@ -1,4 +1,4 @@
 package model
 
-class Table(val nums:Array[Array[Int]]) {
+class Table(val nums: Array[Array[Int]]) {
 }
