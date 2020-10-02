@@ -351,4 +351,12 @@ class Grid extends GridPane {
       }
   }
 
+  def reset(): Unit = {
+    for (x <- 0 until boardSize)
+      for (y <- 0 until boardSize) {
+        val cell = cells(x)(y)
+        cell.field.setText("")
+        cell.originalField = true
+      }
+  }
 }

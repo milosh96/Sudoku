@@ -56,7 +56,10 @@ class Sudoku extends Application {
           grid.loadTable(loadedTable)
         }
         catch {
-          case e: Exception => invalid("Table")
+          case e: Exception => {
+            invalid("Table")
+            grid.reset
+          }
         }
       }
 

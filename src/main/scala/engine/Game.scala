@@ -133,7 +133,7 @@ object Game {
   def solve(table: Table, possibilities: Array[Array[mutable.Set[Int]]]): Table = {
     val (x, y) = getMinPossibilities(possibilities)
     if (x == -1) {
-      if (hasEmptyFields(table)) null
+      if (!checkEnd(table)) null
       else table
     } else {
       for (tryNumber <- 0 until possibilities(x)(y).size) {
